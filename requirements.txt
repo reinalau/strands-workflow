@@ -1,0 +1,31 @@
+# Core Strands SDK + community tools (provides the `workflow` orchestration tool)
+strands-agents[litellm,ollama]==1.52.0
+strands-agents-tools==0.8.6
+
+# Ollama python client — required even with the [ollama] extra above.
+# Verified empirically: without it, task execution fails with
+# "Failed to create ollama model: No module named 'ollama'"
+ollama==0.5.1
+
+# Data validation for workflow input
+pydantic==2.13.4
+
+# Testing
+pytest==8.3.4
+
+# Evaluation framework (strands-agents-evals)
+# Uses the same model provider configured in .env (Gemini or Ollama) as judge —
+# no Amazon Bedrock required. Run with: python -m evals.evaluate_workflow
+strands-agents-evals>=1.0.0
+
+# Loads .env into os.environ automatically (needed by src/main.py)
+python-dotenv==1.0.1
+
+# NOTE on providers:
+# - Ollama: fully local, no extra package beyond the [ollama] extra above.
+#   Requires the Ollama daemon running locally (https://ollama.com) and the
+#   model pulled: `ollama pull gemma4:e2b-it-qat`
+# - Gemini: routed through LiteLLM (model_provider="litellm", model_id=
+#   "gemini/<model>") — verified that strands_tools' internal create_model()
+#   has NO native "gemini" provider, only via litellm/openai-compatible
+#   routing. Requires GEMINI_API_KEY (free tier at https://aistudio.google.com/apikey).

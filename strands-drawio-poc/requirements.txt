@@ -1,0 +1,10 @@
+# Core Strands SDK (MCPClient is part of strands.tools.mcp)
+strands-agents[litellm,ollama]==1.52.0
+mcp==1.*
+
+python-dotenv==1.0.1
+
+# NOTE: This POC also requires Node.js >= 18 installed on the system
+# (NOT a pip package) — the drawio MCP server runs via:
+#   npx @drawio/mcp
+# Verify with: node --version

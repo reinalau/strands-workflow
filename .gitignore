@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Env vars / secrets
+.env
+
+# Generated at runtime
+logs/*.log
+outputs/*.md
+outputs/*.png
+outputs/*.json
+!examples/sample_input.json
+
+# Strands workflow persistence (local run state, not part of the repo)
+logs/workflows/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store

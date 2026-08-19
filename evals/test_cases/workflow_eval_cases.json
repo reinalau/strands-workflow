@@ -1,0 +1,20 @@
+[
+  {
+    "id": "northwind-logistics",
+    "description": "SA discovery meeting with a logistics company facing legacy migration challenges",
+    "input": {
+      "company_name": "Northwind Logistics",
+      "known_challenges": "Legacy on-prem warehouse management system, slow order-to-ship times, no real-time inventory visibility across 12 regional warehouses.",
+      "stakeholders": "Maria Gomez (VP Operations, cares about downtime risk during migration); Dev Patel (CTO, skeptical of vendor lock-in); Sam Ortiz (Warehouse Floor Manager, worried about retraining staff).",
+      "raw_meeting_notes": "Maria opened saying Q3 SLAs were missed twice due to system outages. Dev asked repeatedly about exit strategy and data portability, seemed unconvinced by cloud pitch. Sam raised concern about barcode scanners compatibility, said floor staff already overwhelmed. Didn't get to discuss budget or timeline before call ended early."
+    },
+    "expected_sections": [
+      "Follow-up email",
+      "Next steps",
+      "Gaps"
+    ],
+    "expected_stakeholders": ["Maria", "Dev", "Sam"],
+    "expected_keywords_research": ["warehouse", "logistics", "migration|modernization|cloud"],
+    "expected_keywords_followup": ["SLA|service level", "vendor|lock-in|portability", "barcode|scanner"]
+  }
+]
