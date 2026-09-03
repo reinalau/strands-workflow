@@ -421,6 +421,8 @@ Realicé una POC funcional para probar el MCP en `strands-drawio-poc/` — verif
 - [strands-agents/tools — workflow.py (código fuente)](https://github.com/strands-agents/tools/blob/main/src/strands_tools/workflow.py)
 - [Prepare & Manage meeting as a Solution Architect (PartyRock, por Jeff Scott)](https://partyrock.aws/u/jfescott/CkWsGSARh/Prepare-and-Manage-meeting-as-a-Solution-Architect)
 - [gemma4:e2b-it-qat](https://ollama.com/library/gemma4)
+- [Artículo relacionado](https://builder.aws.com/content/3Hv0A1JrHbwfgzEktts2k0Z1FeO/workflow-en-strands-un-dag-de-tareas-ejecutado-como-herramienta-unica)
+
 
 ## Licencia
 
