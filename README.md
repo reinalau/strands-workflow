@@ -1,7 +1,7 @@
 # Strands Agents - Patrón de Orquestación Workflow
 
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat&logo=python&logoColor=white)
-![Strands Agents](https://img.shields.io/badge/Strands_Agents-Framework-FF9900?style=flat&logo=amazonaws&logoColor=white)
+![Strands Agents](https://img.shields.io/badge/Strands_Agents-SDK-FF9900?style=flat&logo=amazonaws&logoColor=white)
 ![Ollama](https://img.shields.io/badge/Ollama-Local_LLM-000000?style=flat&logo=ollama&logoColor=white)
 ![Gemma](https://img.shields.io/badge/Gemma-gemma4:e2b--it--qat-4285F4?style=flat&logo=google&logoColor=white)
 ![Gemini](https://img.shields.io/badge/AI-Gemini%202.5%20Flash-purple?style=flat&logo=google&logoColor=white)
@@ -9,7 +9,7 @@
 
 ## Introducción
 
-Este es un ejemplo educativo del patrón de orquestación de **Agent Workflow** del framework Strands Agents. El Workflow tool es una herramienta de orquestación basada en **tareas con dependencias explícitas y resolución automática** — un grafo de tareas acíclico donde algunas tareas deben esperar el resultado de otras antes de poder ejecutarse, y donde varias tareas independientes pueden correr en paralelo hasta converger en puntos de agregación (*join points*). A diferencia de Graph, Workflow no está pensado para topologías cíclicas ni condiciones de enrutamiento entre nodos — su fuerte es la gestión operacional del pipeline: reintentos automáticos ante fallos, prioridad de ejecución, resolución de dependencias, entre otros.
+Este es un ejemplo educativo del patrón de orquestación de **Agent Workflow** de Strands Agents. El Workflow tool es una herramienta de orquestación basada en **tareas con dependencias explícitas y resolución automática** — un grafo de tareas acíclico donde algunas tareas deben esperar el resultado de otras antes de poder ejecutarse, y donde varias tareas independientes pueden correr en paralelo hasta converger en puntos de agregación (*join points*). A diferencia de Graph, Workflow no está pensado para topologías cíclicas ni condiciones de enrutamiento entre nodos — su fuerte es la gestión operacional del pipeline: reintentos automáticos ante fallos, prioridad de ejecución, resolución de dependencias, entre otros.
 
 Utilicé para probar Ollama-Gemma4 (via docker) y la capa gratuita de Gemini via api key.
 
@@ -234,11 +234,11 @@ graph TD
 Hallazgos verificados en código y en ejecuciones reales:
 
 - **`pause`/`resume` no están implementados**, pese a que la documentación oficial de Strands los promete como *Advanced Feature*. Verificado corriendo ambas acciones sin ningún LLM de por medio: devuelven `{"status": "error", "content": [{"text": "🚧 Action '...' is not yet implemented"}]}`. Confirmado también que el archivo fuente del paquete instalado (`pip install strands-agents-tools==0.8.6`) es **idéntico byte a byte** al que se ve en el repo — no es un problema de versión desactualizada, es una discrepancia real entre documentación e implementación.
-- **Cualquier task con acceso a la propia tool `workflow` puede invocarla recursivamente.** No es un bug de la implementación del framework en sí, sino de la combinación herencia-de-tools-por-default + modelos agénticos: si no restringís explícitamente `"tools"` por task, cada sub-agente hereda todo el toolset del padre, incluida `workflow`. Con Gemini 3.5 esto disparó una llamada recursiva real que creó un workflow anidado y terminó crasheando. Mitigado en este proyecto con la constante `NO_TOOLS` en `builder.py` — no es una solución oficial de la librería, es un workaround.
+- **Cualquier task con acceso a la propia tool `workflow` puede invocarla recursivamente.** No es un bug de la implementación del sdk en sí, sino de la combinación herencia-de-tools-por-default + modelos agénticos: si no restringís explícitamente `"tools"` por task, cada sub-agente hereda todo el toolset del padre, incluida `workflow`. Con Gemini 3.5 esto disparó una llamada recursiva real que creó un workflow anidado y terminó crasheando. Mitigado en este proyecto con la constante `NO_TOOLS` en `builder.py` — no es una solución oficial de la librería, es un workaround.
 - **Si una tarea falla, el workflow puede quedar colgado para siempre en vez de fallar explícitamente.** `get_ready_tasks()` exige que el `status` de cada dependencia sea literalmente `"completed"` para considerar lista a una tarea dependiente. Si una tarea termina con `status: "error"` (por ejemplo, por truncamiento de `max_tokens`, o por el problema de arriba), sus dependientes nunca se vuelven "ready", pero el loop principal (`while len(completed_tasks) < total_tasks`) tampoco corta la ejecución — sigue girando indefinidamente con `time.sleep(0.1)`. Verificado en ejecución real: hubo que cortar el proceso a mano.
 - **LiteLLM (usado para Gemini) tiene un schema de configuración distinto al de Ollama.** `OllamaConfig` acepta `temperature`/`max_tokens` planos; `LiteLLMConfig` solo valida `context_window_limit`, `model_id`, `params`, `stream` — pasar `temperature`/`max_tokens` planos genera un `UserWarning` y **esos parámetros quedan ignorados silenciosamente** (Gemini corre con sus defaults propios).
 - **Con Gemini/LiteLLM y paralelismo real, el proceso puede crashear de forma intermitente — no es específico de Windows.** Verificado con traceback real: `asyncio.exceptions.CancelledError` dentro de `aiohttp`, con `RuntimeError: ... attached to a different loop`. Causa raíz confirmada en el issue tracker de LiteLLM (BerriAI/litellm **#7667** y **#24230**, ambos abiertos): `litellm.module_level_aclient` — el cliente HTTP async compartido específicamente para streaming de Vertex/Gemini — es un **singleton global creado una sola vez al importar `litellm`**, y a diferencia del resto de la caché de clientes de LiteLLM (que sí incorpora el `id()` del event loop en su key, ver `LLMClientCache.update_cache_key_with_event_loop`), este objeto puntual **no es loop-aware**. `workflow.py` corre cada task en su propio thread, y cada thread crea su propio `asyncio.run()` — con 2+ tasks usando LiteLLM en paralelo, compiten por ese mismo cliente global y crashea. Confirmado que **también ocurre en WSL2/Linux**, no solo en Windows nativo (se había asumido erróneamente lo contrario en una versión anterior de este README, basado en una sola corrida exitosa — dato insuficiente).
-  **Workaround aplicado en este proyecto**: El framework Strands expone `STRANDS_WORKFLOW_MAX_THREADS` (env var leída una sola vez, al importar el módulo). Seteándola en `1`, el `ThreadPoolExecutor` interno nunca corre 2 tasks en threads distintos al mismo tiempo, así que la condición de carrera nunca se da. Se aplica **automáticamente y solo si `MODEL_PROVIDER=gemini`** (ver `src/main.py` y `evals/evaluate_workflow.py`) — con Ollama no hace falta, no usa el transport `aiohttp` de LiteLLM. Costo: se pierde el paralelismo real de la Fase 1 al usar Gemini (las 3 tasks corren en serie, igual que Ollama sin `OLLAMA_NUM_PARALLEL`).
+  **Workaround aplicado en este proyecto**: Strands expone `STRANDS_WORKFLOW_MAX_THREADS` (env var leída una sola vez, al importar el módulo). Seteándola en `1`, el `ThreadPoolExecutor` interno nunca corre 2 tasks en threads distintos al mismo tiempo, así que la condición de carrera nunca se da. Se aplica **automáticamente y solo si `MODEL_PROVIDER=gemini`** (ver `src/main.py` y `evals/evaluate_workflow.py`) — con Ollama no hace falta, no usa el transport `aiohttp` de LiteLLM. Costo: se pierde el paralelismo real de la Fase 1 al usar Gemini (las 3 tasks corren en serie, igual que Ollama sin `OLLAMA_NUM_PARALLEL`).
 
 
 
@@ -346,7 +346,7 @@ python -m src.main --input examples/sample_input.json --workflow-id mi_corrida -
 
 ### 6. Ejecución de Evaluación de Comportamiento (`evals/`)
 
-El proyecto usa el framework oficial **`strands-agents-evals`** con el mismo provider configurado en `.env` (Gemini u Ollama) como juez — sin necesidad de Amazon Bedrock.
+El proyecto usa el **`strands-agents-evals`** con el mismo provider configurado en `.env` (Gemini u Ollama) como juez — sin necesidad de Amazon Bedrock.
 
 ```bash
 python -m evals.evaluate_workflow
